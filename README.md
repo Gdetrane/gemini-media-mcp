@@ -186,6 +186,28 @@ Or if building from source:
 }
 ```
 
+## Companion Skills for Claude Code
+
+The `skills/` directory contains Claude Code skills that provide interactive workflows on top of the MCP tools. Each skill guides Claude through prompt engineering, model selection, and iterative refinement for a specific media type.
+
+| Skill | Directory | Description |
+|-------|-----------|-------------|
+| **gemini-image-gen** | `skills/gemini-image-gen/` | Image generation, editing, and multi-reference composition |
+| **video-gen** | `skills/video-gen/` | Video generation with async polling, image-to-video, extension |
+| **music-gen** | `skills/music-gen/` | Music generation with structure tags, lyrics, genre control |
+| **tts-gen** | `skills/tts-gen/` | Text-to-speech with voice and language selection |
+
+To install a skill, copy its directory to `~/.claude/skills/`:
+
+```bash
+cp -r skills/video-gen ~/.claude/skills/
+cp -r skills/music-gen ~/.claude/skills/
+cp -r skills/tts-gen ~/.claude/skills/
+cp -r skills/gemini-image-gen ~/.claude/skills/
+```
+
+Skills are optional — the MCP tools work without them. But the skills add prompt engineering guidance, model tier recommendations, and interactive review workflows that significantly improve output quality.
+
 ## Building from Source
 
 ```bash
