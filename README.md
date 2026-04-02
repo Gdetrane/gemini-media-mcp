@@ -13,8 +13,10 @@ Unified Go MCP server for AI media generation via Google Gemini API and Vertex A
 - **Video generation** -- text-to-video via Veo 3.1 Lite, Fast, and Standard tiers
 - **Image-to-video** -- animate still images into video clips
 - **Video extension** -- chain clips for longer content (Fast and Standard tiers)
+- **Text-to-speech** -- generate spoken audio with configurable voices and languages
+- **Music generation** -- AI music via Lyria 3 (30s clips or full songs with vocals, structure control)
 - **Single binary** -- no runtime dependencies, runs over stdio transport
-- **Provider abstraction** -- backend-agnostic interfaces for image, video, and model operations
+- **Provider abstraction** -- backend-agnostic interfaces for image, video, audio, and model operations
 - **Dual backend** -- supports both Gemini API (API key) and Vertex AI (project credentials)
 
 ## Quick Start
@@ -59,6 +61,8 @@ Then add it to your MCP client -- see [MCP Client Configuration](#mcp-client-con
 | `extend_video` | Chain video clips for longer content | Async |
 | `video_status` | Check video generation progress | Sync |
 | `download_video` | Download completed video | Sync |
+| `generate_audio` | Generate spoken audio from text (TTS) | Sync |
+| `generate_music` | Generate AI music from text description (Lyria) | Sync |
 | `list_models` | Show available models with capabilities and pricing | Sync |
 | `get_config` | Show current backend and configuration | Sync |
 
@@ -85,7 +89,67 @@ Both tiers support resolutions 1K, 2K, 4K and aspect ratios 1:1, 2:3, 3:2, 3:4, 
 
 Lite supports 720p and 1080p. Fast and Standard support 720p, 1080p, and 4K. Video extension (`extend_video`) is only available on Fast and Standard tiers.
 
-You can pass the tier name (`lite`, `fast`, `standard`, `nb2`, `pro`) or a raw model ID directly.
+### Audio (TTS)
+
+| Tier | Model | Best For | Cost |
+|------|-------|----------|------|
+| tts | `gemini-2.5-flash-preview-tts` | Text-to-speech with natural voices | Standard Gemini token pricing |
+
+The `generate_audio` tool converts text to spoken audio. It supports:
+
+- **Voice selection** -- Choose from prebuilt voices like `Aoede`, `Kore`, `Puck`, and more. Default: `Aoede`
+- **Language** -- Set the language code (e.g., `en-US`, `it-IT`, `cs-CZ`, `de-DE`). Default: `en-US`
+- **Natural speech** -- Generates expressive, natural-sounding speech with appropriate pacing and intonation
+
+Output is saved as raw PCM audio (`audio/L16`, 24kHz sample rate). The file can be played with tools like `ffplay` or converted to other formats:
+
+```bash
+# Play directly
+ffplay -f s16le -ar 24000 -ac 1 ~/generated_media/audio-2026-04-02T12-20-12-0603.pcm
+
+# Convert to WAV
+ffmpeg -f s16le -ar 24000 -ac 1 -i audio.pcm audio.wav
+
+# Convert to MP3
+ffmpeg -f s16le -ar 24000 -ac 1 -i audio.pcm audio.mp3
+```
+
+### Music (Lyria)
+
+| Tier | Model | Output | Best For | Cost |
+|------|-------|--------|----------|------|
+| clip (default) | `lyria-3-clip-preview` | 30-second clips | Quick iterations, sound design | ~$0.08/song |
+| full | `lyria-3-pro-preview` | Up to ~3 minutes | Full songs with vocals, verses, choruses | Token-based |
+
+The `generate_music` tool creates AI-generated music from text descriptions. Capabilities include:
+
+- **Genre and style** -- specify any genre, instruments, BPM, key/scale, mood
+- **Structure control** -- use tags like `[Verse]`, `[Chorus]`, `[Bridge]`, `[Intro]`, `[Outro]`
+- **Custom lyrics** -- include lyrics with section markers for vocal tracks
+- **Timestamp control** -- `[0:00 - 0:10] Intro: gentle piano...` for precise section timing
+- **Multi-language** -- prompt language determines output language
+- **High fidelity** -- 48kHz stereo MP3 output
+
+All generated music is watermarked with SynthID.
+
+**Example prompts:**
+
+```
+# Instrumental
+"A gentle acoustic guitar melody in C major, 90 BPM, calm and peaceful indie folk"
+
+# With structure
+"[Intro] Ambient synth pad, ethereal
+[Verse] Lo-fi hip-hop beat, mellow piano chords, vinyl crackle
+[Chorus] Uplifting, add strings and gentle drums
+[Outro] Fade out with reverb"
+
+# With lyrics
+"Upbeat pop song, 120 BPM, major key
+[Chorus] We're dancing in the light / Everything feels right / Under stars so bright tonight"
+```
+
+You can pass the tier name (`lite`, `fast`, `standard`, `nb2`, `pro`, `tts`, `clip`, `full`) or a raw model ID directly.
 
 ## MCP Client Configuration
 

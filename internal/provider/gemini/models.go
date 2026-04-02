@@ -40,5 +40,23 @@ func (p *GeminiProvider) ListModels(_ context.Context) ([]provider.ModelInfo, er
 			AspectRatios: []string{"16:9", "9:16"},
 			PricePerSec:  "$0.40/sec (720p/1080p), $0.60/sec (4k)",
 		},
+		{
+			ID: p.modelMap["tts"], Tier: "tts", MediaType: "audio",
+			Resolutions:  []string{},
+			AspectRatios: []string{},
+			PricePerSec:  "standard Gemini token pricing",
+		},
+		{
+			ID: p.modelMap["clip"], Tier: "clip", MediaType: "music",
+			Resolutions:  []string{},
+			AspectRatios: []string{},
+			PricePerSec:  "standard Gemini token pricing (~$0.08/song)",
+		},
+		{
+			ID: p.modelMap["full"], Tier: "full", MediaType: "music",
+			Resolutions:  []string{},
+			AspectRatios: []string{},
+			PricePerSec:  "standard Gemini token pricing (~$0.15/song)",
+		},
 	}, nil
 }

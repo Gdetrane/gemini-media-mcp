@@ -22,8 +22,8 @@ func main() {
 		log.Fatalf("creating provider: %v", err)
 	}
 
-	// GeminiProvider implements all three interfaces
-	srv := server.New(p, p, p, cfg.OutputDir)
+	// GeminiProvider implements all five interfaces
+	srv := server.New(p, p, p, p, p, cfg.OutputDir)
 
 	if err := srv.Run(ctx); err != nil {
 		log.Fatalf("server error: %v", err)

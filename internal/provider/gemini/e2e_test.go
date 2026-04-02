@@ -43,6 +43,111 @@ func TestE2E_GenerateImage(t *testing.T) {
 	t.Logf("Generated image: %s (model: %s)", result.FilePath, result.Model)
 }
 
+func TestE2E_GenerateAudio(t *testing.T) {
+	apiKey := os.Getenv("GOOGLE_API_KEY")
+	if apiKey == "" {
+		t.Skip("GOOGLE_API_KEY not set")
+	}
+
+	ctx := context.Background()
+	p, err := New(ctx, Config{
+		APIKey:    apiKey,
+		OutputDir: t.TempDir(),
+	})
+	if err != nil {
+		t.Fatalf("creating provider: %v", err)
+	}
+
+	result, err := p.GenerateAudio(ctx, provider.AudioRequest{
+		Prompt:    "Say hello world",
+		VoiceName: "Aoede",
+	})
+	if err != nil {
+		t.Fatalf("generating audio: %v", err)
+	}
+
+	if result.FilePath == "" {
+		t.Error("empty file path")
+	}
+	if _, err := os.Stat(result.FilePath); err != nil {
+		t.Errorf("file not found: %v", err)
+	}
+	t.Logf("Generated audio: %s (model: %s, mime: %s)", result.FilePath, result.Model, result.MimeType)
+}
+
+func TestE2E_GenerateMusic(t *testing.T) {
+	apiKey := os.Getenv("GOOGLE_API_KEY")
+	if apiKey == "" {
+		t.Skip("GOOGLE_API_KEY not set")
+	}
+
+	ctx := context.Background()
+	p, err := New(ctx, Config{
+		APIKey:    apiKey,
+		OutputDir: t.TempDir(),
+	})
+	if err != nil {
+		t.Fatalf("creating provider: %v", err)
+	}
+
+	result, err := p.GenerateMusic(ctx, provider.MusicRequest{
+		Prompt: "A gentle acoustic guitar melody in C major, 90 BPM, calm and peaceful",
+		Model:  "clip",
+	})
+	if err != nil {
+		t.Fatalf("generating music: %v", err)
+	}
+
+	if result.FilePath == "" {
+		t.Error("empty file path")
+	}
+	if _, err := os.Stat(result.FilePath); err != nil {
+		t.Errorf("file not found: %v", err)
+	}
+	t.Logf("Generated music: %s (model: %s, mime: %s)", result.FilePath, result.Model, result.MimeType)
+	if result.Lyrics != "" {
+		t.Logf("Lyrics/structure: %s", result.Lyrics)
+	}
+}
+
+func TestE2E_ListModels(t *testing.T) {
+	apiKey := os.Getenv("GOOGLE_API_KEY")
+	if apiKey == "" {
+		t.Skip("GOOGLE_API_KEY not set")
+	}
+
+	ctx := context.Background()
+	p, err := New(ctx, Config{
+		APIKey:    apiKey,
+		OutputDir: t.TempDir(),
+	})
+	if err != nil {
+		t.Fatalf("creating provider: %v", err)
+	}
+
+	models, err := p.ListModels(ctx)
+	if err != nil {
+		t.Fatalf("listing models: %v", err)
+	}
+
+	// Verify all 8 tiers
+	tiers := make(map[string]bool)
+	for _, m := range models {
+		tiers[m.Tier] = true
+		t.Logf("Model: %-40s tier=%-8s type=%-6s", m.ID, m.Tier, m.MediaType)
+	}
+
+	for _, want := range []string{"nb2", "pro", "lite", "fast", "standard", "tts", "clip", "full"} {
+		if !tiers[want] {
+			t.Errorf("missing tier %q", want)
+		}
+	}
+
+	if len(models) != 8 {
+		t.Errorf("got %d models, want 8", len(models))
+	}
+}
+
 func TestE2E_GenerateVideo(t *testing.T) {
 	apiKey := os.Getenv("GOOGLE_API_KEY")
 	if apiKey == "" {

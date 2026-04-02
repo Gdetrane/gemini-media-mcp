@@ -14,6 +14,8 @@ import (
 var (
 	_ provider.ImageGenerator = (*GeminiProvider)(nil)
 	_ provider.VideoGenerator = (*GeminiProvider)(nil)
+	_ provider.AudioGenerator = (*GeminiProvider)(nil)
+	_ provider.MusicGenerator = (*GeminiProvider)(nil)
 	_ provider.ModelLister    = (*GeminiProvider)(nil)
 )
 
@@ -81,6 +83,9 @@ func defaultModelMap() map[string]string {
 		"lite":     "veo-3.1-lite-generate-preview",
 		"fast":     "veo-3.1-fast-generate-preview",
 		"standard": "veo-3.1-generate-preview",
+		"tts":      "gemini-2.5-flash-preview-tts",
+		"clip":     "lyria-3-clip-preview",
+		"full":     "lyria-3-pro-preview",
 	}
 }
 

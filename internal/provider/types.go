@@ -77,6 +77,34 @@ type VideoResult struct {
 	Duration    int    `json:"duration"`
 }
 
+// AudioRequest describes a text-to-speech audio generation request.
+type AudioRequest struct {
+	Prompt       string `json:"prompt" jsonschema:"Text to convert to speech or instructions for audio generation"`
+	VoiceName    string `json:"voiceName,omitempty" jsonschema:"Prebuilt voice name (e.g. Aoede, Kore, Puck)"`
+	LanguageCode string `json:"languageCode,omitempty" jsonschema:"Language code (e.g. en-US, it-IT, cs-CZ)"`
+}
+
+// AudioResult contains the result of an audio generation operation.
+type AudioResult struct {
+	FilePath string `json:"filePath"`
+	Model    string `json:"model"`
+	MimeType string `json:"mimeType"`
+}
+
+// MusicRequest describes a text-to-music generation request.
+type MusicRequest struct {
+	Prompt string `json:"prompt" jsonschema:"Text description of the music to generate. Supports genre, instruments, BPM, key, mood, structure tags like [Verse] [Chorus] [Bridge], and custom lyrics"`
+	Model  string `json:"model,omitempty" jsonschema:"Model: clip (default, 30s clips) or full (up to 3 minutes, full songs with structure control)"`
+}
+
+// MusicResult contains the result of a music generation operation.
+type MusicResult struct {
+	FilePath string `json:"filePath"`
+	Model    string `json:"model"`
+	MimeType string `json:"mimeType"`
+	Lyrics   string `json:"lyrics,omitempty"` // Generated lyrics/structure if returned
+}
+
 // ModelInfo describes an available model and its capabilities.
 type ModelInfo struct {
 	ID           string   `json:"id"`

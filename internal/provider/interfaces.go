@@ -18,6 +18,16 @@ type VideoGenerator interface {
 	Download(ctx context.Context, operationID string) (*VideoResult, error)
 }
 
+// AudioGenerator handles text-to-speech audio generation.
+type AudioGenerator interface {
+	GenerateAudio(ctx context.Context, req AudioRequest) (*AudioResult, error)
+}
+
+// MusicGenerator handles AI music generation.
+type MusicGenerator interface {
+	GenerateMusic(ctx context.Context, req MusicRequest) (*MusicResult, error)
+}
+
 // ModelLister provides discovery of available models and capabilities.
 type ModelLister interface {
 	ListModels(ctx context.Context) ([]ModelInfo, error)

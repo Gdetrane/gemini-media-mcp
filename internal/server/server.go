@@ -14,6 +14,8 @@ type Server struct {
 	mcp       *mcp.Server
 	images    provider.ImageGenerator
 	videos    provider.VideoGenerator
+	audio     provider.AudioGenerator
+	music     provider.MusicGenerator
 	models    provider.ModelLister
 	outputDir string
 }
@@ -21,7 +23,7 @@ type Server struct {
 // New creates a Server with the given provider implementations and output
 // directory. Any provider may be nil if that category of tools is not needed.
 // Tools are only registered for non-nil providers.
-func New(images provider.ImageGenerator, videos provider.VideoGenerator, models provider.ModelLister, outputDir string) *Server {
+func New(images provider.ImageGenerator, videos provider.VideoGenerator, audio provider.AudioGenerator, music provider.MusicGenerator, models provider.ModelLister, outputDir string) *Server {
 	mcpServer := mcp.NewServer(&mcp.Implementation{
 		Name:    "gemini-media-mcp",
 		Version: "0.1.0",
@@ -31,6 +33,8 @@ func New(images provider.ImageGenerator, videos provider.VideoGenerator, models 
 		mcp:       mcpServer,
 		images:    images,
 		videos:    videos,
+		audio:     audio,
+		music:     music,
 		models:    models,
 		outputDir: outputDir,
 	}
@@ -40,6 +44,12 @@ func New(images provider.ImageGenerator, videos provider.VideoGenerator, models 
 	}
 	if videos != nil {
 		s.registerVideoTools()
+	}
+	if audio != nil {
+		s.registerAudioTools()
+	}
+	if music != nil {
+		s.registerMusicTools()
 	}
 	s.registerConfigTools()
 

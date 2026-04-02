@@ -66,6 +66,24 @@ func (m *mockVideoGen) Download(_ context.Context, _ string) (*provider.VideoRes
 	return m.downloadResult, m.downloadErr
 }
 
+type mockAudioGen struct {
+	generateResult *provider.AudioResult
+	generateErr    error
+}
+
+func (m *mockAudioGen) GenerateAudio(_ context.Context, _ provider.AudioRequest) (*provider.AudioResult, error) {
+	return m.generateResult, m.generateErr
+}
+
+type mockMusicGen struct {
+	generateResult *provider.MusicResult
+	generateErr    error
+}
+
+func (m *mockMusicGen) GenerateMusic(_ context.Context, _ provider.MusicRequest) (*provider.MusicResult, error) {
+	return m.generateResult, m.generateErr
+}
+
 type mockModelLister struct {
 	models []provider.ModelInfo
 	err    error
@@ -78,7 +96,7 @@ func (m *mockModelLister) ListModels(_ context.Context) ([]provider.ModelInfo, e
 // --- Constructor tests ---
 
 func TestNew_CreatesServer(t *testing.T) {
-	srv := New(&mockImageGen{}, nil, nil, t.TempDir())
+	srv := New(&mockImageGen{}, nil, nil, nil, nil, t.TempDir())
 	if srv == nil {
 		t.Fatal("New returned nil")
 	}
@@ -88,14 +106,14 @@ func TestNew_CreatesServer(t *testing.T) {
 }
 
 func TestNew_NilProviders(t *testing.T) {
-	srv := New(nil, nil, nil, t.TempDir())
+	srv := New(nil, nil, nil, nil, nil, t.TempDir())
 	if srv == nil {
 		t.Fatal("New returned nil with all nil providers")
 	}
 }
 
 func TestMCPServer_ReturnsUnderlyingServer(t *testing.T) {
-	srv := New(&mockImageGen{}, nil, nil, t.TempDir())
+	srv := New(&mockImageGen{}, nil, nil, nil, nil, t.TempDir())
 	if srv.MCPServer() != srv.mcp {
 		t.Fatal("MCPServer() did not return the underlying server")
 	}
@@ -109,7 +127,7 @@ func TestMCPServer_ReturnsUnderlyingServer(t *testing.T) {
 func connectTestClient(t *testing.T, mock *mockImageGen) *mcp.ClientSession {
 	t.Helper()
 
-	srv := New(mock, nil, nil, t.TempDir())
+	srv := New(mock, nil, nil, nil, nil, t.TempDir())
 
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 
@@ -131,7 +149,7 @@ func connectTestClient(t *testing.T, mock *mockImageGen) *mcp.ClientSession {
 		t.Fatalf("client connect: %v", err)
 	}
 	t.Cleanup(func() {
-		session.Close()
+		_ = session.Close()
 	})
 
 	return session
@@ -168,7 +186,7 @@ func TestToolsRegistered(t *testing.T) {
 }
 
 func TestToolsNotRegistered_WhenImageProviderNil(t *testing.T) {
-	srv := New(nil, nil, nil, t.TempDir())
+	srv := New(nil, nil, nil, nil, nil, t.TempDir())
 
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 
@@ -189,7 +207,7 @@ func TestToolsNotRegistered_WhenImageProviderNil(t *testing.T) {
 		t.Fatalf("client connect: %v", err)
 	}
 	t.Cleanup(func() {
-		session.Close()
+		_ = session.Close()
 	})
 
 	result, err := session.ListTools(context.Background(), nil)
@@ -403,7 +421,7 @@ func TestComposeImages_Error(t *testing.T) {
 func connectVideoTestClient(t *testing.T, mock *mockVideoGen) *mcp.ClientSession {
 	t.Helper()
 
-	srv := New(nil, mock, nil, t.TempDir())
+	srv := New(nil, mock, nil, nil, nil, t.TempDir())
 
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 
@@ -424,7 +442,7 @@ func connectVideoTestClient(t *testing.T, mock *mockVideoGen) *mcp.ClientSession
 		t.Fatalf("client connect: %v", err)
 	}
 	t.Cleanup(func() {
-		session.Close()
+		_ = session.Close()
 	})
 
 	return session
@@ -526,7 +544,7 @@ func TestDownloadVideo_Success(t *testing.T) {
 
 func TestVideoToolsNotRegistered_WhenVideoProviderNil(t *testing.T) {
 	// Only image provider, no video provider.
-	srv := New(&mockImageGen{}, nil, nil, t.TempDir())
+	srv := New(&mockImageGen{}, nil, nil, nil, nil, t.TempDir())
 
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 
@@ -547,7 +565,7 @@ func TestVideoToolsNotRegistered_WhenVideoProviderNil(t *testing.T) {
 		t.Fatalf("client connect: %v", err)
 	}
 	t.Cleanup(func() {
-		session.Close()
+		_ = session.Close()
 	})
 
 	result, err := session.ListTools(context.Background(), nil)
@@ -588,7 +606,7 @@ func TestListModels_Success(t *testing.T) {
 		},
 	}
 
-	srv := New(nil, nil, lister, t.TempDir())
+	srv := New(nil, nil, nil, nil, lister, t.TempDir())
 
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 
@@ -609,7 +627,7 @@ func TestListModels_Success(t *testing.T) {
 		t.Fatalf("client connect: %v", err)
 	}
 	t.Cleanup(func() {
-		session.Close()
+		_ = session.Close()
 	})
 
 	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -632,7 +650,7 @@ func TestListModels_Success(t *testing.T) {
 
 func TestGetConfig_ReturnsBackendInfo(t *testing.T) {
 	outDir := t.TempDir()
-	srv := New(nil, nil, nil, outDir)
+	srv := New(nil, nil, nil, nil, nil, outDir)
 
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 
@@ -653,7 +671,7 @@ func TestGetConfig_ReturnsBackendInfo(t *testing.T) {
 		t.Fatalf("client connect: %v", err)
 	}
 	t.Cleanup(func() {
-		session.Close()
+		_ = session.Close()
 	})
 
 	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -675,7 +693,7 @@ func TestGetConfig_ReturnsBackendInfo(t *testing.T) {
 }
 
 func TestListModelsNotRegistered_WhenModelListerNil(t *testing.T) {
-	srv := New(nil, nil, nil, t.TempDir())
+	srv := New(nil, nil, nil, nil, nil, t.TempDir())
 
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 
@@ -696,7 +714,7 @@ func TestListModelsNotRegistered_WhenModelListerNil(t *testing.T) {
 		t.Fatalf("client connect: %v", err)
 	}
 	t.Cleanup(func() {
-		session.Close()
+		_ = session.Close()
 	})
 
 	result, err := session.ListTools(context.Background(), nil)
@@ -707,6 +725,290 @@ func TestListModelsNotRegistered_WhenModelListerNil(t *testing.T) {
 	for _, tool := range result.Tools {
 		if tool.Name == "list_models" {
 			t.Error("list_models should not be registered when model lister is nil")
+		}
+	}
+}
+
+// --- Audio tool tests ---
+
+// connectAudioTestClient creates a Server with the given audio mock,
+// connects a test client via in-memory transport, and returns the session.
+func connectAudioTestClient(t *testing.T, mock *mockAudioGen) *mcp.ClientSession {
+	t.Helper()
+
+	srv := New(nil, nil, mock, nil, nil, t.TempDir())
+
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	go func() {
+		_ = srv.mcp.Run(ctx, serverTransport)
+	}()
+
+	client := mcp.NewClient(&mcp.Implementation{
+		Name:    "test-client",
+		Version: "0.0.1",
+	}, nil)
+
+	session, err := client.Connect(ctx, clientTransport, nil)
+	if err != nil {
+		t.Fatalf("client connect: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = session.Close()
+	})
+
+	return session
+}
+
+func TestGenerateAudio_Success(t *testing.T) {
+	mock := &mockAudioGen{
+		generateResult: &provider.AudioResult{
+			FilePath: "/tmp/test/audio-abc.wav",
+			Model:    "gemini-2.5-flash",
+			MimeType: "audio/wav",
+		},
+	}
+
+	session := connectAudioTestClient(t, mock)
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "generate_audio",
+		Arguments: map[string]any{
+			"prompt": "Say hello world in a cheerful voice",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+
+	if res.IsError {
+		t.Fatal("expected success, got error result")
+	}
+
+	assertContentContains(t, res, "Audio generated!")
+	assertContentContains(t, res, "gemini-2.5-flash")
+	assertContentContains(t, res, "/tmp/test/audio-abc.wav")
+	assertStructuredField(t, res, "filePath", "/tmp/test/audio-abc.wav")
+}
+
+func TestGenerateAudio_Error(t *testing.T) {
+	mock := &mockAudioGen{
+		generateErr: errors.New("TTS quota exceeded"),
+	}
+
+	session := connectAudioTestClient(t, mock)
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "generate_audio",
+		Arguments: map[string]any{
+			"prompt": "anything",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+
+	if !res.IsError {
+		t.Fatal("expected error result, got success")
+	}
+	assertContentContains(t, res, "TTS quota exceeded")
+}
+
+func TestAudioToolsNotRegistered_WhenAudioProviderNil(t *testing.T) {
+	// Only image provider, no audio provider.
+	srv := New(&mockImageGen{}, nil, nil, nil, nil, t.TempDir())
+
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	go func() {
+		_ = srv.mcp.Run(ctx, serverTransport)
+	}()
+
+	client := mcp.NewClient(&mcp.Implementation{
+		Name:    "test-client",
+		Version: "0.0.1",
+	}, nil)
+
+	session, err := client.Connect(ctx, clientTransport, nil)
+	if err != nil {
+		t.Fatalf("client connect: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = session.Close()
+	})
+
+	result, err := session.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+
+	for _, tool := range result.Tools {
+		if tool.Name == "generate_audio" {
+			t.Error("generate_audio should not be registered when audio provider is nil")
+		}
+	}
+}
+
+// --- Music tool tests ---
+
+// connectMusicTestClient creates a Server with the given music mock,
+// connects a test client via in-memory transport, and returns the session.
+func connectMusicTestClient(t *testing.T, mock *mockMusicGen) *mcp.ClientSession {
+	t.Helper()
+
+	srv := New(nil, nil, nil, mock, nil, t.TempDir())
+
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	go func() {
+		_ = srv.mcp.Run(ctx, serverTransport)
+	}()
+
+	client := mcp.NewClient(&mcp.Implementation{
+		Name:    "test-client",
+		Version: "0.0.1",
+	}, nil)
+
+	session, err := client.Connect(ctx, clientTransport, nil)
+	if err != nil {
+		t.Fatalf("client connect: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = session.Close()
+	})
+
+	return session
+}
+
+func TestGenerateMusic_Success(t *testing.T) {
+	mock := &mockMusicGen{
+		generateResult: &provider.MusicResult{
+			FilePath: "/tmp/test/music-abc.mp3",
+			Model:    "lyria-3-clip-preview",
+			MimeType: "audio/mp3",
+		},
+	}
+
+	session := connectMusicTestClient(t, mock)
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "generate_music",
+		Arguments: map[string]any{
+			"prompt": "A gentle acoustic guitar melody in C major",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+
+	if res.IsError {
+		t.Fatal("expected success, got error result")
+	}
+
+	assertContentContains(t, res, "Music generated!")
+	assertContentContains(t, res, "lyria-3-clip-preview")
+	assertContentContains(t, res, "/tmp/test/music-abc.mp3")
+	assertStructuredField(t, res, "filePath", "/tmp/test/music-abc.mp3")
+}
+
+func TestGenerateMusic_WithLyrics(t *testing.T) {
+	mock := &mockMusicGen{
+		generateResult: &provider.MusicResult{
+			FilePath: "/tmp/test/music-xyz.mp3",
+			Model:    "lyria-3-pro-preview",
+			MimeType: "audio/mp3",
+			Lyrics:   "[Verse]\nHello world\n[Chorus]\nLa la la",
+		},
+	}
+
+	session := connectMusicTestClient(t, mock)
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "generate_music",
+		Arguments: map[string]any{
+			"prompt": "A pop song about coding",
+			"model":  "full",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+
+	if res.IsError {
+		t.Fatal("expected success, got error result")
+	}
+
+	assertContentContains(t, res, "Music generated!")
+	assertContentContains(t, res, "Lyrics/Structure")
+	assertStructuredField(t, res, "lyrics", "[Verse]\nHello world\n[Chorus]\nLa la la")
+}
+
+func TestGenerateMusic_Error(t *testing.T) {
+	mock := &mockMusicGen{
+		generateErr: errors.New("music generation quota exceeded"),
+	}
+
+	session := connectMusicTestClient(t, mock)
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "generate_music",
+		Arguments: map[string]any{
+			"prompt": "anything",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+
+	if !res.IsError {
+		t.Fatal("expected error result, got success")
+	}
+	assertContentContains(t, res, "music generation quota exceeded")
+}
+
+func TestMusicToolsNotRegistered_WhenMusicProviderNil(t *testing.T) {
+	// Only image provider, no music provider.
+	srv := New(&mockImageGen{}, nil, nil, nil, nil, t.TempDir())
+
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	go func() {
+		_ = srv.mcp.Run(ctx, serverTransport)
+	}()
+
+	client := mcp.NewClient(&mcp.Implementation{
+		Name:    "test-client",
+		Version: "0.0.1",
+	}, nil)
+
+	session, err := client.Connect(ctx, clientTransport, nil)
+	if err != nil {
+		t.Fatalf("client connect: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = session.Close()
+	})
+
+	result, err := session.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+
+	for _, tool := range result.Tools {
+		if tool.Name == "generate_music" {
+			t.Error("generate_music should not be registered when music provider is nil")
 		}
 	}
 }

@@ -51,15 +51,15 @@ func (s *Server) handleListModels(ctx context.Context, _ *mcp.CallToolRequest, _
 	b.WriteString("Available Models\n")
 	b.WriteString("================\n\n")
 	for _, m := range models {
-		b.WriteString(fmt.Sprintf("%-40s  tier=%-8s  type=%-6s", m.ID, m.Tier, m.MediaType))
+		fmt.Fprintf(&b, "%-40s  tier=%-8s  type=%-6s", m.ID, m.Tier, m.MediaType)
 		if m.PricePerSec != "" {
-			b.WriteString(fmt.Sprintf("  price=%s/s", m.PricePerSec))
+			fmt.Fprintf(&b, "  price=%s/s", m.PricePerSec)
 		}
 		if len(m.Resolutions) > 0 {
-			b.WriteString(fmt.Sprintf("  res=[%s]", strings.Join(m.Resolutions, ", ")))
+			fmt.Fprintf(&b, "  res=[%s]", strings.Join(m.Resolutions, ", "))
 		}
 		if len(m.AspectRatios) > 0 {
-			b.WriteString(fmt.Sprintf("  ratios=[%s]", strings.Join(m.AspectRatios, ", ")))
+			fmt.Fprintf(&b, "  ratios=[%s]", strings.Join(m.AspectRatios, ", "))
 		}
 		b.WriteString("\n")
 	}
