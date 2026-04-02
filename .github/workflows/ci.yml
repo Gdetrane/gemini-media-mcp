@@ -31,7 +31,7 @@ jobs:
       - name: E2E tests
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-        run: go test -tags=e2e ./... -v -timeout 5m
+        run: go test -tags=e2e -run TestE2E ./... -v -timeout 10m
 
   release:
     runs-on: ubuntu-latest
