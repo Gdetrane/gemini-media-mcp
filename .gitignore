@@ -1,0 +1,15 @@
+# Binaries
+/gemini-media-mcp
+*.exe
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+
+# Test output
+coverage.out
