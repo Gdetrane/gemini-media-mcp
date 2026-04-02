@@ -47,7 +47,7 @@ Then add it to your MCP client -- see [MCP Client Configuration](#mcp-client-con
 | `GOOGLE_CLOUD_LOCATION` | No | `us-central1` | GCP region for Vertex AI |
 | `MEDIA_OUTPUT_DIR` | No | `~/generated_media` | Directory for saved media files |
 
-*One of `GOOGLE_API_KEY` or `GOOGLE_CLOUD_PROJECT` must be set. If both are set, Vertex AI takes precedence.
+*One of `GOOGLE_API_KEY` or `GOOGLE_CLOUD_PROJECT` must be set. If both are set, API key takes precedence (avoids conflicts when `GOOGLE_CLOUD_PROJECT` is set in the shell for other tools).
 
 ## Available Tools
 

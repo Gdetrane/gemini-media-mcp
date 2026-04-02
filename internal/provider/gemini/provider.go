@@ -51,13 +51,15 @@ func NewFromConfig(ctx context.Context, cfg *config.Config) (*GeminiProvider, er
 func New(ctx context.Context, cfg Config) (*GeminiProvider, error) {
 	clientCfg := &genai.ClientConfig{}
 
-	if cfg.VertexProject != "" {
+	if cfg.APIKey != "" {
+		// API key takes precedence — avoids accidentally using Vertex AI
+		// when GOOGLE_CLOUD_PROJECT leaks from the shell environment.
+		clientCfg.Backend = genai.BackendGeminiAPI
+		clientCfg.APIKey = cfg.APIKey
+	} else if cfg.VertexProject != "" {
 		clientCfg.Backend = genai.BackendVertexAI
 		clientCfg.Project = cfg.VertexProject
 		clientCfg.Location = cfg.VertexLocation
-	} else if cfg.APIKey != "" {
-		clientCfg.Backend = genai.BackendGeminiAPI
-		clientCfg.APIKey = cfg.APIKey
 	} else {
 		return nil, fmt.Errorf("no credentials: provide APIKey or VertexProject")
 	}
