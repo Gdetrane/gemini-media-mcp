@@ -37,7 +37,10 @@ func connectE2EClient(t *testing.T) *mcp.ClientSession {
 		t.Fatalf("creating gemini provider: %v", err)
 	}
 
-	srv := New(p, p, p, p, p, outDir)
+	srv := NewWithOptions(p, p, p, p, p, Options{
+		Backend:   config.BackendGeminiAPI,
+		OutputDir: outDir,
+	})
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 
 	errCh := make(chan error, 1)

@@ -626,6 +626,7 @@ func TestListModels_Success(t *testing.T) {
 				MediaType:    "image",
 				Resolutions:  []string{"1K", "2K"},
 				AspectRatios: []string{"1:1", "16:9"},
+				PricePerSec:  "$0.067/img",
 			},
 			{
 				ID:          "veo-2.0-generate-001",
@@ -636,7 +637,10 @@ func TestListModels_Success(t *testing.T) {
 		},
 	}
 
-	srv := New(nil, nil, nil, nil, lister, t.TempDir())
+	srv := NewWithOptions(nil, nil, nil, nil, lister, Options{
+		Backend:   "gemini-api",
+		OutputDir: t.TempDir(),
+	})
 
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 
@@ -675,12 +679,17 @@ func TestListModels_Success(t *testing.T) {
 	assertContentContains(t, res, "Available Models")
 	assertContentContains(t, res, "gemini-3.1-flash-image-preview")
 	assertContentContains(t, res, "veo-2.0-generate-001")
-	assertContentContains(t, res, "$0.35/s")
+	assertContentContains(t, res, "$0.067/img")
+	assertContentContains(t, res, "$0.35")
+	assertContentNotContains(t, res, "/s")
 }
 
 func TestGetConfig_ReturnsBackendInfo(t *testing.T) {
 	outDir := t.TempDir()
-	srv := New(nil, nil, nil, nil, nil, outDir)
+	srv := NewWithOptions(nil, nil, nil, nil, nil, Options{
+		Backend:   "gemini-api",
+		OutputDir: outDir,
+	})
 
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 
@@ -720,6 +729,51 @@ func TestGetConfig_ReturnsBackendInfo(t *testing.T) {
 	assertContentContains(t, res, outDir)
 	assertStructuredField(t, res, "backend", "gemini-api")
 	assertStructuredField(t, res, "outputDir", outDir)
+}
+
+func TestGetConfig_ReturnsVertexBackendInfo(t *testing.T) {
+	outDir := t.TempDir()
+	srv := NewWithOptions(nil, nil, nil, nil, nil, Options{
+		Backend:   "vertex-ai",
+		OutputDir: outDir,
+	})
+
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	go func() {
+		_ = srv.mcp.Run(ctx, serverTransport)
+	}()
+
+	client := mcp.NewClient(&mcp.Implementation{
+		Name:    "test-client",
+		Version: "0.0.1",
+	}, nil)
+
+	session, err := client.Connect(ctx, clientTransport, nil)
+	if err != nil {
+		t.Fatalf("client connect: %v", err)
+	}
+	t.Cleanup(func() {
+		_ = session.Close()
+	})
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "get_config",
+		Arguments: map[string]any{},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+
+	if res.IsError {
+		t.Fatal("expected success, got error result")
+	}
+
+	assertContentContains(t, res, "Backend: vertex-ai")
+	assertStructuredField(t, res, "backend", "vertex-ai")
 }
 
 func TestListModelsNotRegistered_WhenModelListerNil(t *testing.T) {

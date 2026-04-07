@@ -22,6 +22,9 @@ func TestLoad_GeminiAPIKey(t *testing.T) {
 	if cfg.Provider.VertexProject != "" {
 		t.Error("VertexProject should be empty for API key auth")
 	}
+	if cfg.Backend() != BackendGeminiAPI {
+		t.Errorf("Backend() = %q, want %q", cfg.Backend(), BackendGeminiAPI)
+	}
 }
 
 func TestLoad_GeminiAPIKeyFallback(t *testing.T) {
@@ -52,6 +55,9 @@ func TestLoad_GoogleAPIKeyTakesPrecedence(t *testing.T) {
 	if cfg.Provider.APIKey != "primary-key" {
 		t.Errorf("APIKey = %q, want %q", cfg.Provider.APIKey, "primary-key")
 	}
+	if cfg.Backend() != BackendGeminiAPI {
+		t.Errorf("Backend() = %q, want %q", cfg.Backend(), BackendGeminiAPI)
+	}
 }
 
 func TestLoad_VertexAI(t *testing.T) {
@@ -70,6 +76,9 @@ func TestLoad_VertexAI(t *testing.T) {
 	}
 	if cfg.Provider.VertexLocation != "europe-west1" {
 		t.Errorf("VertexLocation = %q, want %q", cfg.Provider.VertexLocation, "europe-west1")
+	}
+	if cfg.Backend() != BackendVertexAI {
+		t.Errorf("Backend() = %q, want %q", cfg.Backend(), BackendVertexAI)
 	}
 }
 
@@ -98,6 +107,13 @@ func TestLoad_NoCredentials(t *testing.T) {
 	_, err := Load()
 	if err == nil {
 		t.Fatal("expected error for missing credentials, got nil")
+	}
+}
+
+func TestConfigBackend_NilConfig(t *testing.T) {
+	var cfg *Config
+	if cfg.Backend() != BackendUnknown {
+		t.Fatalf("Backend() = %q, want %q", cfg.Backend(), BackendUnknown)
 	}
 }
 

@@ -23,7 +23,10 @@ func main() {
 	}
 
 	// GeminiProvider implements all five interfaces
-	srv := server.New(p, p, p, p, p, cfg.OutputDir)
+	srv := server.NewWithOptions(p, p, p, p, p, server.Options{
+		Backend:   cfg.Backend(),
+		OutputDir: cfg.OutputDir,
+	})
 
 	if err := srv.Run(ctx); err != nil {
 		log.Fatalf("server error: %v", err)

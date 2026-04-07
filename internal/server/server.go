@@ -17,17 +17,38 @@ type Server struct {
 	audio     provider.AudioGenerator
 	music     provider.MusicGenerator
 	models    provider.ModelLister
+	backend   string
 	outputDir string
 }
 
+// Options configures server metadata exposed via MCP tools.
+type Options struct {
+	Backend   string
+	OutputDir string
+}
+
 // New creates a Server with the given provider implementations and output
-// directory. Any provider may be nil if that category of tools is not needed.
-// Tools are only registered for non-nil providers.
+// directory. Backend metadata defaults to "unknown". Any provider may be nil
+// if that category of tools is not needed. Tools are only registered for
+// non-nil providers.
 func New(images provider.ImageGenerator, videos provider.VideoGenerator, audio provider.AudioGenerator, music provider.MusicGenerator, models provider.ModelLister, outputDir string) *Server {
+	return NewWithOptions(images, videos, audio, music, models, Options{
+		Backend:   "unknown",
+		OutputDir: outputDir,
+	})
+}
+
+// NewWithOptions creates a Server with explicit metadata about the configured
+// backend and output directory.
+func NewWithOptions(images provider.ImageGenerator, videos provider.VideoGenerator, audio provider.AudioGenerator, music provider.MusicGenerator, models provider.ModelLister, opts Options) *Server {
 	mcpServer := mcp.NewServer(&mcp.Implementation{
 		Name:    "gemini-media-mcp",
 		Version: "0.1.0",
 	}, nil)
+
+	if opts.Backend == "" {
+		opts.Backend = "unknown"
+	}
 
 	s := &Server{
 		mcp:       mcpServer,
@@ -36,7 +57,8 @@ func New(images provider.ImageGenerator, videos provider.VideoGenerator, audio p
 		audio:     audio,
 		music:     music,
 		models:    models,
-		outputDir: outputDir,
+		backend:   opts.Backend,
+		outputDir: opts.OutputDir,
 	}
 
 	if images != nil {
