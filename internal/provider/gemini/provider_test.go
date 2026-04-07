@@ -1,9 +1,14 @@
 package gemini
 
 import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"io"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestResolveModel(t *testing.T) {
@@ -61,6 +66,13 @@ func TestGenerateFilename(t *testing.T) {
 }
 
 func TestGenerateFilename_Uniqueness(t *testing.T) {
+	fixedTime := time.Date(2026, time.April, 7, 17, 56, 32, 0, time.UTC)
+	randomBytes := make([]byte, 0, 100*8)
+	for i := 0; i < 100; i++ {
+		randomBytes = binary.BigEndian.AppendUint64(randomBytes, uint64(i+1))
+	}
+	overrideFilenameSources(t, fixedTime, bytes.NewReader(randomBytes))
+
 	names := make(map[string]bool)
 	for i := 0; i < 100; i++ {
 		name := generateFilename("image", "png")
@@ -69,4 +81,35 @@ func TestGenerateFilename_Uniqueness(t *testing.T) {
 		}
 		names[name] = true
 	}
+}
+
+func TestShortID_FallbackUsesTimestamp(t *testing.T) {
+	fixedTime := time.Date(2026, time.April, 7, 17, 56, 32, 123456789, time.UTC)
+	overrideFilenameSources(t, fixedTime, errReader{})
+
+	got := shortID()
+	want := fmt.Sprintf("%016x", fixedTime.UnixNano())
+	if got != want {
+		t.Fatalf("shortID() fallback = %q, want %q", got, want)
+	}
+}
+
+func overrideFilenameSources(t *testing.T, fixedTime time.Time, random io.Reader) {
+	t.Helper()
+
+	oldNowUTC := nowUTC
+	oldRandSource := randSource
+	nowUTC = func() time.Time { return fixedTime }
+	randSource = random
+
+	t.Cleanup(func() {
+		nowUTC = oldNowUTC
+		randSource = oldRandSource
+	})
+}
+
+type errReader struct{}
+
+func (errReader) Read(_ []byte) (int, error) {
+	return 0, io.ErrUnexpectedEOF
 }
