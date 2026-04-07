@@ -5,6 +5,7 @@ package gemini
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -90,21 +91,16 @@ func TestE2E_GenerateMusic(t *testing.T) {
 		t.Fatalf("creating provider: %v", err)
 	}
 
-	result, err := p.GenerateMusic(ctx, provider.MusicRequest{
+	result := generateMusicWithRetry(t, ctx, p, provider.MusicRequest{
 		Prompt: "A gentle acoustic guitar melody in C major, 90 BPM, calm and peaceful",
 		Model:  "clip",
 	})
-	if err != nil {
-		t.Fatalf("generating music: %v", err)
-	}
 
 	if result.FilePath == "" {
 		t.Error("empty file path")
 	}
-	if _, err := os.Stat(result.FilePath); err != nil {
-		t.Errorf("file not found: %v", err)
-	}
-	t.Logf("Generated music: %s (model: %s, mime: %s)", result.FilePath, result.Model, result.MimeType)
+	size := assertAudioFile(t, result.FilePath)
+	t.Logf("Generated music: %s (model: %s, mime: %s, size: %d)", result.FilePath, result.Model, result.MimeType, size)
 	if result.Lyrics != "" {
 		t.Logf("Lyrics/structure: %s", result.Lyrics)
 	}
@@ -209,4 +205,32 @@ func TestE2E_GenerateVideo(t *testing.T) {
 		t.Errorf("download model = %q, want %q", result.Model, op.Model)
 	}
 	t.Logf("Downloaded video: %s", result.FilePath)
+}
+
+func generateMusicWithRetry(t *testing.T, ctx context.Context, p *GeminiProvider, req provider.MusicRequest) *provider.MusicResult {
+	t.Helper()
+
+	const (
+		maxAttempts             = 3
+		transientNoAudioMessage = "no audio data found in API response"
+	)
+
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		result, err := p.GenerateMusic(ctx, req)
+		if err == nil {
+			return result
+		}
+
+		lastErr = err
+		if !strings.Contains(err.Error(), transientNoAudioMessage) || attempt == maxAttempts {
+			t.Fatalf("generating music: %v", err)
+		}
+
+		t.Logf("GenerateMusic attempt %d/%d returned no audio data, retrying", attempt, maxAttempts)
+		time.Sleep(2 * time.Second)
+	}
+
+	t.Fatalf("generating music: %v", lastErr)
+	return nil
 }
