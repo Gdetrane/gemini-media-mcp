@@ -55,3 +55,17 @@ func TestGenerateMusic_EmptyPrompt(t *testing.T) {
 		t.Fatal("expected error for empty prompt")
 	}
 }
+
+func TestGenerateMusic_RejectsKnownNonMusicModel(t *testing.T) {
+	p := &GeminiProvider{modelMap: defaultModelMap()}
+	_, err := p.GenerateMusic(context.Background(), provider.MusicRequest{
+		Prompt: "a piano solo",
+		Model:  "nb2",
+	})
+	if err == nil {
+		t.Fatal("expected error for non-music model")
+	}
+	if err != nil && err.Error() != `model "gemini-3.1-flash-image-preview" does not support music generation` {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

@@ -40,6 +40,13 @@ func TestResolveModel(t *testing.T) {
 	}
 }
 
+func TestValidateKnownModel_AllowsUnknownRawModel(t *testing.T) {
+	p := &GeminiProvider{modelMap: defaultModelMap()}
+	if err := p.validateKnownModel("custom-model-v1", "image operations", p.modelMap["nb2"], p.modelMap["pro"]); err != nil {
+		t.Fatalf("validateKnownModel() = %v, want nil", err)
+	}
+}
+
 func TestGenerateFilename(t *testing.T) {
 	tests := []struct {
 		name      string

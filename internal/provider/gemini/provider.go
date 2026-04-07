@@ -103,3 +103,22 @@ func (p *GeminiProvider) resolveModel(model, fallback string) string {
 	}
 	return model
 }
+
+func (p *GeminiProvider) validateKnownModel(model, operation string, allowed ...string) error {
+	allowedModels := make(map[string]struct{}, len(allowed))
+	for _, allowedModel := range allowed {
+		allowedModels[allowedModel] = struct{}{}
+	}
+
+	if _, ok := allowedModels[model]; ok {
+		return nil
+	}
+
+	for _, knownModel := range p.modelMap {
+		if model == knownModel {
+			return fmt.Errorf("model %q does not support %s", model, operation)
+		}
+	}
+
+	return nil
+}

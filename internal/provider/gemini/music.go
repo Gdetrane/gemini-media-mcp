@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"google.golang.org/genai"
 
@@ -20,6 +19,9 @@ func (p *GeminiProvider) GenerateMusic(ctx context.Context, req provider.MusicRe
 	}
 
 	model := p.resolveModel(req.Model, "clip")
+	if err := p.validateKnownModel(model, "music generation", p.modelMap["clip"], p.modelMap["full"]); err != nil {
+		return nil, err
+	}
 
 	contents := []*genai.Content{
 		genai.NewContentFromText(req.Prompt, genai.RoleUser),
@@ -33,28 +35,13 @@ func (p *GeminiProvider) GenerateMusic(ctx context.Context, req provider.MusicRe
 		return nil, fmt.Errorf("generating music: %w", err)
 	}
 
-	if resp == nil || len(resp.Candidates) == 0 || resp.Candidates[0].Content == nil {
+	if resp == nil || len(resp.Candidates) == 0 {
 		return nil, fmt.Errorf("no music returned by the API")
 	}
 
-	var audioData []byte
-	var mimeType string
-	var lyrics strings.Builder
+	audioData, mimeType, lyrics := extractMusicResponse(resp)
 
-	for _, part := range resp.Candidates[0].Content.Parts {
-		if part.InlineData != nil && part.InlineData.Data != nil {
-			audioData = part.InlineData.Data
-			mimeType = part.InlineData.MIMEType
-		}
-		if part.Text != "" {
-			if lyrics.Len() > 0 {
-				lyrics.WriteString("\n")
-			}
-			lyrics.WriteString(part.Text)
-		}
-	}
-
-	if audioData == nil {
+	if len(audioData) == 0 {
 		return nil, fmt.Errorf("no audio data found in API response")
 	}
 
@@ -68,7 +55,7 @@ func (p *GeminiProvider) GenerateMusic(ctx context.Context, req provider.MusicRe
 		FilePath: filePath,
 		Model:    model,
 		MimeType: mimeType,
-		Lyrics:   lyrics.String(),
+		Lyrics:   lyrics,
 	}, nil
 }
 

@@ -51,27 +51,25 @@ func (p *GeminiProvider) GenerateAudio(ctx context.Context, req provider.AudioRe
 		return nil, fmt.Errorf("generating audio: %w", err)
 	}
 
-	if resp == nil || len(resp.Candidates) == 0 || resp.Candidates[0].Content == nil {
+	if resp == nil || len(resp.Candidates) == 0 {
 		return nil, fmt.Errorf("no audio returned by the API")
 	}
 
-	// Find the audio part in the response
-	for _, part := range resp.Candidates[0].Content.Parts {
-		if part.InlineData != nil && part.InlineData.Data != nil {
-			ext := audioExtensionFromMIME(part.InlineData.MIMEType)
-			filePath, err := p.saveAudio(part.InlineData.Data, ext)
-			if err != nil {
-				return nil, err
-			}
-			return &provider.AudioResult{
-				FilePath: filePath,
-				Model:    model,
-				MimeType: part.InlineData.MIMEType,
-			}, nil
-		}
+	blob, ok := extractFirstNonEmptyInlineData(resp)
+	if !ok {
+		return nil, fmt.Errorf("no audio data found in API response")
 	}
 
-	return nil, fmt.Errorf("no audio data found in API response")
+	ext := audioExtensionFromMIME(blob.MIMEType)
+	filePath, err := p.saveAudio(blob.Data, ext)
+	if err != nil {
+		return nil, err
+	}
+	return &provider.AudioResult{
+		FilePath: filePath,
+		Model:    model,
+		MimeType: blob.MIMEType,
+	}, nil
 }
 
 // saveAudio writes raw audio bytes to the output directory with a generated filename.
