@@ -25,8 +25,9 @@ Unified Go MCP server for AI media generation via Google Gemini API and Vertex A
 # Install
 go install github.com/mordor-forge/gemini-media-mcp/cmd/gemini-media-mcp@latest
 
-# Configure (Gemini API)
-export GOOGLE_API_KEY="your-api-key"
+# Configure (Gemini API; either variable name works)
+export GEMINI_API_KEY="your-api-key"
+# export GOOGLE_API_KEY="your-api-key"
 
 # Or configure (Vertex AI)
 export GOOGLE_CLOUD_PROJECT="your-project-id"
@@ -48,6 +49,8 @@ Then add it to your MCP client -- see [MCP Client Configuration](#mcp-client-con
 | `MEDIA_OUTPUT_DIR` | No | `~/generated_media` | Directory for saved media files |
 
 *One of `GOOGLE_API_KEY` or `GOOGLE_CLOUD_PROJECT` must be set. If both are set, API key takes precedence (avoids conflicts when `GOOGLE_CLOUD_PROJECT` is set in the shell for other tools).
+
+If you're unsure which backend is active, call `get_config` from your MCP client to confirm the selected backend and output directory.
 
 ## Available Tools
 
@@ -87,7 +90,7 @@ Both tiers support resolutions 1K, 2K, 4K and aspect ratios 1:1, 2:3, 3:2, 3:4, 
 | fast | `veo-3.1-fast-generate-preview` | Good quality iterations | $0.15/sec (720p/1080p), $0.35/sec (4k) |
 | standard | `veo-3.1-generate-preview` | Final renders, 4K | $0.40/sec (720p/1080p), $0.60/sec (4k) |
 
-Lite supports 720p and 1080p. Fast and Standard support 720p, 1080p, and 4K. Video extension (`extend_video`) is only available on Fast and Standard tiers.
+Supported aspect ratios are `16:9` and `9:16`. Supported durations are `4`, `6`, and `8` seconds. Lite supports `720p` and `1080p`. Fast and Standard support `720p`, `1080p`, and `4K`. Video extension (`extend_video`) is only available on Fast and Standard tiers, and the extension tier must match the original generation.
 
 ### Audio (TTS)
 
@@ -170,6 +173,8 @@ Add to your Claude Code MCP settings (`~/.claude/settings.json` or project `.mcp
   }
 }
 ```
+
+Use either `GOOGLE_API_KEY` or `GEMINI_API_KEY` in the `env` block above; both are accepted.
 
 Or if building from source:
 
