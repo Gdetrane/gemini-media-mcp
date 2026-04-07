@@ -134,6 +134,115 @@ func TestDownload_EmptyOperationID(t *testing.T) {
 	}
 }
 
+func TestValidateVideoGenerationInput_InvalidAspectRatio(t *testing.T) {
+	p := &GeminiProvider{modelMap: defaultModelMap()}
+	err := p.validateVideoGenerationInput(p.modelMap["lite"], "1:1", "720p", 4)
+	if err == nil || !strings.Contains(err.Error(), "aspectRatio") {
+		t.Fatalf("expected aspectRatio validation error, got %v", err)
+	}
+}
+
+func TestValidateVideoGenerationInput_InvalidResolution(t *testing.T) {
+	p := &GeminiProvider{modelMap: defaultModelMap()}
+	err := p.validateVideoGenerationInput(p.modelMap["fast"], "16:9", "1440p", 4)
+	if err == nil || !strings.Contains(err.Error(), "resolution") {
+		t.Fatalf("expected resolution validation error, got %v", err)
+	}
+}
+
+func TestValidateVideoGenerationInput_InvalidDuration(t *testing.T) {
+	p := &GeminiProvider{modelMap: defaultModelMap()}
+	err := p.validateVideoGenerationInput(p.modelMap["fast"], "16:9", "1080p", 5)
+	if err == nil || !strings.Contains(err.Error(), "duration") {
+		t.Fatalf("expected duration validation error, got %v", err)
+	}
+}
+
+func TestValidateVideoGenerationInput_LiteRejects4K(t *testing.T) {
+	p := &GeminiProvider{modelMap: defaultModelMap()}
+	err := p.validateVideoGenerationInput(p.modelMap["lite"], "16:9", "4k", 4)
+	if err == nil || !strings.Contains(err.Error(), "4k") {
+		t.Fatalf("expected lite 4k validation error, got %v", err)
+	}
+}
+
+func TestValidateVideoGenerationInput_RejectsNonVideoModel(t *testing.T) {
+	p := &GeminiProvider{modelMap: defaultModelMap()}
+	err := p.validateVideoGenerationInput(p.modelMap["nb2"], "16:9", "720p", 4)
+	if err == nil || !strings.Contains(err.Error(), "does not support video generation") {
+		t.Fatalf("expected non-video model validation error, got %v", err)
+	}
+}
+
+func TestValidateVideoGenerationInput_AllowsFast4K(t *testing.T) {
+	p := &GeminiProvider{modelMap: defaultModelMap()}
+	if err := p.validateVideoGenerationInput(p.modelMap["fast"], "16:9", "4k", 8); err != nil {
+		t.Fatalf("validateVideoGenerationInput: %v", err)
+	}
+}
+
+func TestResolveExtensionModel_DefaultsToOriginalModel(t *testing.T) {
+	p := &GeminiProvider{modelMap: defaultModelMap()}
+	got, err := p.resolveExtensionModel("models/veo-3.1-fast-generate-preview/operations/op-123", "")
+	if err != nil {
+		t.Fatalf("resolveExtensionModel: %v", err)
+	}
+	if got != p.modelMap["fast"] {
+		t.Fatalf("model = %q, want %q", got, p.modelMap["fast"])
+	}
+}
+
+func TestResolveExtensionModel_RejectsLite(t *testing.T) {
+	p := &GeminiProvider{modelMap: defaultModelMap()}
+	_, err := p.resolveExtensionModel("models/veo-3.1-fast-generate-preview/operations/op-123", "lite")
+	if err == nil || !strings.Contains(err.Error(), "does not support video extension") {
+		t.Fatalf("expected lite extension validation error, got %v", err)
+	}
+}
+
+func TestResolveExtensionModel_RejectsModelMismatch(t *testing.T) {
+	p := &GeminiProvider{modelMap: defaultModelMap()}
+	_, err := p.resolveExtensionModel("models/veo-3.1-generate-preview/operations/op-123", "fast")
+	if err == nil || !strings.Contains(err.Error(), "must match original model") {
+		t.Fatalf("expected model mismatch error, got %v", err)
+	}
+}
+
+func TestResolveExtensionModel_RequiresOriginalModel(t *testing.T) {
+	p := &GeminiProvider{modelMap: defaultModelMap()}
+	_, err := p.resolveExtensionModel("operations/op-123", "")
+	if err == nil || !strings.Contains(err.Error(), "could not determine original model") {
+		t.Fatalf("expected missing original model error, got %v", err)
+	}
+}
+
+func TestModelFromOperationName(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantModel string
+	}{
+		{
+			name:      "parses model from operation name",
+			input:     "models/veo-3.1-lite-generate-preview/operations/op-123",
+			wantModel: "veo-3.1-lite-generate-preview",
+		},
+		{
+			name:      "returns empty for malformed operation name",
+			input:     "operations/op-123",
+			wantModel: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := modelFromOperationName(tt.input); got != tt.wantModel {
+				t.Fatalf("modelFromOperationName(%q) = %q, want %q", tt.input, got, tt.wantModel)
+			}
+		})
+	}
+}
+
 func TestBuildVideoConfig_Defaults(t *testing.T) {
 	config := buildVideoConfig("", "", 0)
 	if config.AspectRatio != "" {

@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/mordor-forge/gemini-media-mcp/internal/provider"
@@ -117,12 +118,22 @@ func (s *Server) handleDownloadVideo(ctx context.Context, _ *mcp.CallToolRequest
 		return nil, provider.VideoResult{}, fmt.Errorf("download video: %w", err)
 	}
 
+	lines := []string{
+		"Video downloaded!",
+		"",
+		fmt.Sprintf("Saved to: %s", result.FilePath),
+		fmt.Sprintf("Operation: %s", result.OperationID),
+	}
+	if result.Model != "" {
+		lines = append(lines, fmt.Sprintf("Model: %s", result.Model))
+	}
+	if result.Duration > 0 {
+		lines = append(lines, fmt.Sprintf("Duration: %ds", result.Duration))
+	}
+
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
-			&mcp.TextContent{Text: fmt.Sprintf(
-				"Video downloaded!\n\nSaved to: %s\nModel: %s\nDuration: %ds\nOperation: %s",
-				result.FilePath, result.Model, result.Duration, result.OperationID,
-			)},
+			&mcp.TextContent{Text: strings.Join(lines, "\n")},
 		},
 	}, *result, nil
 }

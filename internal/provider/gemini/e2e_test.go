@@ -205,5 +205,8 @@ func TestE2E_GenerateVideo(t *testing.T) {
 	if _, err := os.Stat(result.FilePath); err != nil {
 		t.Errorf("file not found: %v", err)
 	}
+	if result.Model != op.Model {
+		t.Errorf("download model = %q, want %q", result.Model, op.Model)
+	}
 	t.Logf("Downloaded video: %s", result.FilePath)
 }

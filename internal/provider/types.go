@@ -70,11 +70,12 @@ type VideoStatus struct {
 }
 
 // VideoResult contains the result of a completed video generation.
+// Metadata fields may be omitted when the API does not return them.
 type VideoResult struct {
 	FilePath    string `json:"filePath"`
 	OperationID string `json:"operationId"`
-	Model       string `json:"model"`
-	Duration    int    `json:"duration"`
+	Model       string `json:"model,omitempty"`
+	Duration    int    `json:"duration,omitempty"`
 }
 
 // AudioRequest describes a text-to-speech audio generation request.
