@@ -65,7 +65,7 @@ type VideoOperation struct {
 type VideoStatus struct {
 	OperationID string `json:"operationId"`
 	Done        bool   `json:"done"`
-	Progress    string `json:"progress"` // "pending", "processing", "complete", "failed"
+	Progress    string `json:"progress"` // "processing", "complete", or "failed"
 	Error       string `json:"error,omitempty"`
 }
 
@@ -110,8 +110,8 @@ type MusicResult struct {
 type ModelInfo struct {
 	ID           string   `json:"id"`
 	Tier         string   `json:"tier"`
-	MediaType    string   `json:"mediaType"` // "image" or "video"
+	MediaType    string   `json:"mediaType"` // "image", "video", "audio", or "music"
 	Resolutions  []string `json:"resolutions"`
 	AspectRatios []string `json:"aspectRatios"`
-	PricePerSec  string   `json:"pricePerSec,omitempty"`
+	PricePerSec  string   `json:"pricePerSec,omitempty"` // Human-readable pricing guidance
 }

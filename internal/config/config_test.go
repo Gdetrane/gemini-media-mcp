@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -107,6 +108,9 @@ func TestLoad_NoCredentials(t *testing.T) {
 	_, err := Load()
 	if err == nil {
 		t.Fatal("expected error for missing credentials, got nil")
+	}
+	if err != nil && !strings.Contains(err.Error(), "GEMINI_API_KEY") {
+		t.Fatalf("error %q does not mention GEMINI_API_KEY", err)
 	}
 }
 

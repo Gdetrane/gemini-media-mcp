@@ -56,6 +56,20 @@ func TestGenerate_EmptyPrompt(t *testing.T) {
 	}
 }
 
+func TestGenerate_RejectsKnownNonImageModel(t *testing.T) {
+	p := &GeminiProvider{modelMap: defaultModelMap()}
+	_, err := p.Generate(context.Background(), provider.ImageRequest{
+		Prompt: "a sunset",
+		Model:  "tts",
+	})
+	if err == nil {
+		t.Fatal("expected error for non-image model")
+	}
+	if err != nil && err.Error() != `model "gemini-2.5-flash-preview-tts" does not support image operations` {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestEdit_EmptyPrompt(t *testing.T) {
 	p := &GeminiProvider{modelMap: defaultModelMap()}
 	_, err := p.Edit(context.Background(), provider.EditImageRequest{Prompt: "", ImagePath: "/tmp/img.png"})
@@ -112,6 +126,7 @@ func TestExtensionFromMIME(t *testing.T) {
 	}{
 		{"image/png", "png"},
 		{"image/jpeg", "jpg"},
+		{"image/gif", "gif"},
 		{"image/webp", "webp"},
 		{"image/unknown", "png"},
 		{"", "png"},

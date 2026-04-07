@@ -20,6 +20,9 @@ func (p *GeminiProvider) Generate(ctx context.Context, req provider.ImageRequest
 	}
 
 	model := p.resolveModel(req.Model, "nb2")
+	if err := p.validateKnownModel(model, "image operations", p.modelMap["nb2"], p.modelMap["pro"]); err != nil {
+		return nil, err
+	}
 
 	contents := []*genai.Content{
 		genai.NewContentFromText(req.Prompt, genai.RoleUser),
@@ -31,27 +34,25 @@ func (p *GeminiProvider) Generate(ctx context.Context, req provider.ImageRequest
 		return nil, fmt.Errorf("generating image: %w", err)
 	}
 
-	if resp == nil || len(resp.Candidates) == 0 || resp.Candidates[0].Content == nil {
+	if resp == nil || len(resp.Candidates) == 0 {
 		return nil, fmt.Errorf("no image returned by the API")
 	}
 
-	// Find the image part in the response
-	for _, part := range resp.Candidates[0].Content.Parts {
-		if part.InlineData != nil && part.InlineData.Data != nil {
-			ext := extensionFromMIME(part.InlineData.MIMEType)
-			filePath, err := p.saveImage(part.InlineData.Data, ext)
-			if err != nil {
-				return nil, err
-			}
-			return &provider.ImageResult{
-				FilePath: filePath,
-				Model:    model,
-				MimeType: part.InlineData.MIMEType,
-			}, nil
-		}
+	blob, ok := extractFirstNonEmptyInlineData(resp)
+	if !ok {
+		return nil, fmt.Errorf("no image data found in API response")
 	}
 
-	return nil, fmt.Errorf("no image data found in API response")
+	ext := extensionFromMIME(blob.MIMEType)
+	filePath, err := p.saveImage(blob.Data, ext)
+	if err != nil {
+		return nil, err
+	}
+	return &provider.ImageResult{
+		FilePath: filePath,
+		Model:    model,
+		MimeType: blob.MIMEType,
+	}, nil
 }
 
 // Edit modifies an existing image based on a text prompt using GenerateContent
@@ -64,12 +65,15 @@ func (p *GeminiProvider) Edit(ctx context.Context, req provider.EditImageRequest
 		return nil, fmt.Errorf("imagePath is required")
 	}
 
+	model := p.resolveModel(req.Model, "nb2")
+	if err := p.validateKnownModel(model, "image operations", p.modelMap["nb2"], p.modelMap["pro"]); err != nil {
+		return nil, err
+	}
+
 	imgBytes, err := os.ReadFile(req.ImagePath)
 	if err != nil {
 		return nil, fmt.Errorf("reading source image %s: %w", req.ImagePath, err)
 	}
-
-	model := p.resolveModel(req.Model, "nb2")
 
 	contents := []*genai.Content{
 		{
@@ -87,26 +91,25 @@ func (p *GeminiProvider) Edit(ctx context.Context, req provider.EditImageRequest
 		return nil, fmt.Errorf("editing image: %w", err)
 	}
 
-	if resp == nil || len(resp.Candidates) == 0 || resp.Candidates[0].Content == nil {
+	if resp == nil || len(resp.Candidates) == 0 {
 		return nil, fmt.Errorf("no image returned by the API")
 	}
 
-	for _, part := range resp.Candidates[0].Content.Parts {
-		if part.InlineData != nil && part.InlineData.Data != nil {
-			ext := extensionFromMIME(part.InlineData.MIMEType)
-			filePath, err := p.saveImage(part.InlineData.Data, ext)
-			if err != nil {
-				return nil, err
-			}
-			return &provider.ImageResult{
-				FilePath: filePath,
-				Model:    model,
-				MimeType: part.InlineData.MIMEType,
-			}, nil
-		}
+	blob, ok := extractFirstNonEmptyInlineData(resp)
+	if !ok {
+		return nil, fmt.Errorf("no image data found in API response")
 	}
 
-	return nil, fmt.Errorf("no image data found in API response")
+	ext := extensionFromMIME(blob.MIMEType)
+	filePath, err := p.saveImage(blob.Data, ext)
+	if err != nil {
+		return nil, err
+	}
+	return &provider.ImageResult{
+		FilePath: filePath,
+		Model:    model,
+		MimeType: blob.MIMEType,
+	}, nil
 }
 
 // Compose creates a new image guided by one or more reference images using
@@ -123,6 +126,9 @@ func (p *GeminiProvider) Compose(ctx context.Context, req provider.ComposeReques
 	}
 
 	model := p.resolveModel(req.Model, "nb2")
+	if err := p.validateKnownModel(model, "image operations", p.modelMap["nb2"], p.modelMap["pro"]); err != nil {
+		return nil, err
+	}
 
 	// Build parts: reference images first, then the text prompt
 	parts := make([]*genai.Part, 0, len(req.ReferenceImages)+1)
@@ -145,26 +151,25 @@ func (p *GeminiProvider) Compose(ctx context.Context, req provider.ComposeReques
 		return nil, fmt.Errorf("composing image: %w", err)
 	}
 
-	if resp == nil || len(resp.Candidates) == 0 || resp.Candidates[0].Content == nil {
+	if resp == nil || len(resp.Candidates) == 0 {
 		return nil, fmt.Errorf("no image returned by the API")
 	}
 
-	for _, part := range resp.Candidates[0].Content.Parts {
-		if part.InlineData != nil && part.InlineData.Data != nil {
-			ext := extensionFromMIME(part.InlineData.MIMEType)
-			filePath, err := p.saveImage(part.InlineData.Data, ext)
-			if err != nil {
-				return nil, err
-			}
-			return &provider.ImageResult{
-				FilePath: filePath,
-				Model:    model,
-				MimeType: part.InlineData.MIMEType,
-			}, nil
-		}
+	blob, ok := extractFirstNonEmptyInlineData(resp)
+	if !ok {
+		return nil, fmt.Errorf("no image data found in API response")
 	}
 
-	return nil, fmt.Errorf("no image data found in API response")
+	ext := extensionFromMIME(blob.MIMEType)
+	filePath, err := p.saveImage(blob.Data, ext)
+	if err != nil {
+		return nil, err
+	}
+	return &provider.ImageResult{
+		FilePath: filePath,
+		Model:    model,
+		MimeType: blob.MIMEType,
+	}, nil
 }
 
 // saveImage writes raw image bytes to the output directory with a generated filename.
@@ -182,6 +187,8 @@ func extensionFromMIME(mime string) string {
 	switch mime {
 	case "image/jpeg":
 		return "jpg"
+	case "image/gif":
+		return "gif"
 	case "image/webp":
 		return "webp"
 	default:

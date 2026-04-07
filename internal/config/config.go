@@ -38,7 +38,7 @@ func Load() (*Config, error) {
 
 	if cfg.Provider.APIKey == "" && cfg.Provider.VertexProject == "" {
 		return nil, fmt.Errorf(
-			"no credentials configured: set GOOGLE_API_KEY for Gemini API, " +
+			"no credentials configured: set GOOGLE_API_KEY or GEMINI_API_KEY for Gemini API, " +
 				"or GOOGLE_CLOUD_PROJECT for Vertex AI",
 		)
 	}
