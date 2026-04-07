@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"google.golang.org/genai"
 
@@ -20,6 +21,9 @@ func (p *GeminiProvider) GenerateVideo(ctx context.Context, req provider.VideoRe
 	}
 
 	model := p.resolveModel(req.Model, "lite")
+	if err := p.validateVideoGenerationInput(model, req.AspectRatio, req.Resolution, req.Duration); err != nil {
+		return nil, err
+	}
 
 	config := buildVideoConfig(req.AspectRatio, req.Resolution, req.Duration)
 
@@ -52,6 +56,9 @@ func (p *GeminiProvider) AnimateImage(ctx context.Context, req provider.AnimateR
 	}
 
 	model := p.resolveModel(req.Model, "lite")
+	if err := p.validateVideoGenerationInput(model, req.AspectRatio, "", req.Duration); err != nil {
+		return nil, err
+	}
 
 	config := buildVideoConfig(req.AspectRatio, "", req.Duration)
 
@@ -102,8 +109,10 @@ func (p *GeminiProvider) Extend(ctx context.Context, req provider.ExtendRequest)
 
 	prevVideo := prevOp.Response.GeneratedVideos[0].Video
 
-	// Default to "fast" for extension — Lite does not support it.
-	model := p.resolveModel(req.Model, "fast")
+	model, err := p.resolveExtensionModel(prevOp.Name, req.Model)
+	if err != nil {
+		return nil, err
+	}
 
 	op, err := p.client.Models.GenerateVideosFromSource(ctx, model, &genai.GenerateVideosSource{
 		Prompt: req.Prompt,
@@ -193,10 +202,15 @@ func (p *GeminiProvider) Download(ctx context.Context, operationID string) (*pro
 		return nil, err
 	}
 
+	model := modelFromOperationName(op.Name)
+	if model == "" {
+		model = modelFromOperationName(operationID)
+	}
+
 	return &provider.VideoResult{
 		FilePath:    filePath,
 		OperationID: operationID,
-		Model:       "", // model is not returned by the operation response
+		Model:       model,
 	}, nil
 }
 
@@ -224,4 +238,73 @@ func buildVideoConfig(aspectRatio, resolution string, duration int) *genai.Gener
 		config.DurationSeconds = &d
 	}
 	return config
+}
+
+func (p *GeminiProvider) validateVideoGenerationInput(model, aspectRatio, resolution string, duration int) error {
+	if err := p.validateVideoModel(model, true); err != nil {
+		return err
+	}
+	if aspectRatio != "" && aspectRatio != "16:9" && aspectRatio != "9:16" {
+		return fmt.Errorf("invalid aspectRatio %q: must be 16:9 or 9:16", aspectRatio)
+	}
+	if resolution != "" && resolution != "720p" && resolution != "1080p" && resolution != "4k" {
+		return fmt.Errorf("invalid resolution %q: must be 720p, 1080p, or 4k", resolution)
+	}
+	if duration != 0 && duration != 4 && duration != 6 && duration != 8 {
+		return fmt.Errorf("invalid duration %d: must be 4, 6, or 8 seconds", duration)
+	}
+	if resolution == "4k" && model == p.modelMap["lite"] {
+		return fmt.Errorf("resolution 4k is not supported by model %q", model)
+	}
+	return nil
+}
+
+func (p *GeminiProvider) validateVideoModel(model string, allowLite bool) error {
+	switch model {
+	case p.modelMap["lite"]:
+		if !allowLite {
+			return fmt.Errorf("model %q does not support video extension", model)
+		}
+	case p.modelMap["fast"], p.modelMap["standard"]:
+		return nil
+	case p.modelMap["nb2"], p.modelMap["pro"], p.modelMap["tts"], p.modelMap["clip"], p.modelMap["full"]:
+		return fmt.Errorf("model %q does not support video generation", model)
+	}
+	return nil
+}
+
+func (p *GeminiProvider) resolveExtensionModel(operationID, requestedModel string) (string, error) {
+	originalModel := modelFromOperationName(operationID)
+	model := originalModel
+	if requestedModel != "" {
+		model = p.resolveModel(requestedModel, "fast")
+	}
+	if model == "" {
+		return "", fmt.Errorf("could not determine original model from operationId %q", operationID)
+	}
+	if err := p.validateVideoModel(model, false); err != nil {
+		return "", err
+	}
+	if originalModel != "" && model != originalModel {
+		return "", fmt.Errorf("extension model %q must match original model %q", model, originalModel)
+	}
+	return model, nil
+}
+
+func modelFromOperationName(operationName string) string {
+	const (
+		modelPrefix    = "models/"
+		operationSplit = "/operations/"
+	)
+
+	if !strings.HasPrefix(operationName, modelPrefix) {
+		return ""
+	}
+
+	trimmed := strings.TrimPrefix(operationName, modelPrefix)
+	if idx := strings.Index(trimmed, operationSplit); idx >= 0 {
+		return trimmed[:idx]
+	}
+
+	return ""
 }

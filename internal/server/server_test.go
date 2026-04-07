@@ -542,6 +542,36 @@ func TestDownloadVideo_Success(t *testing.T) {
 	assertStructuredField(t, res, "operationId", "op-video-123")
 }
 
+func TestDownloadVideo_OmitsUnknownMetadata(t *testing.T) {
+	mock := &mockVideoGen{
+		downloadResult: &provider.VideoResult{
+			FilePath:    "/tmp/test/video-abc.mp4",
+			OperationID: "op-video-123",
+		},
+	}
+
+	session := connectVideoTestClient(t, mock)
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "download_video",
+		Arguments: map[string]any{
+			"operationId": "op-video-123",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CallTool: %v", err)
+	}
+
+	if res.IsError {
+		t.Fatal("expected success, got error result")
+	}
+
+	assertContentContains(t, res, "Video downloaded!")
+	assertContentContains(t, res, "Operation: op-video-123")
+	assertContentNotContains(t, res, "Model:")
+	assertContentNotContains(t, res, "Duration:")
+}
+
 func TestVideoToolsNotRegistered_WhenVideoProviderNil(t *testing.T) {
 	// Only image provider, no video provider.
 	srv := New(&mockImageGen{}, nil, nil, nil, nil, t.TempDir())
@@ -1029,6 +1059,19 @@ func assertContentContains(t *testing.T, res *mcp.CallToolResult, substr string)
 		}
 	}
 	t.Errorf("no content entry contains %q", substr)
+}
+
+func assertContentNotContains(t *testing.T, res *mcp.CallToolResult, substr string) {
+	t.Helper()
+	for _, c := range res.Content {
+		data, err := json.Marshal(c)
+		if err != nil {
+			continue
+		}
+		if contains(string(data), substr) {
+			t.Errorf("content entry unexpectedly contains %q", substr)
+		}
+	}
 }
 
 // assertStructuredField checks that the structured output contains a field
