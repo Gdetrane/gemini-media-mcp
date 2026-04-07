@@ -6,6 +6,12 @@ import (
 	"path/filepath"
 )
 
+const (
+	BackendUnknown   = "unknown"
+	BackendGeminiAPI = "gemini-api"
+	BackendVertexAI  = "vertex-ai"
+)
+
 // Config holds all configuration for the MCP server.
 type Config struct {
 	Provider  ProviderConfig
@@ -42,6 +48,21 @@ func Load() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// Backend returns the effective backend based on the configured credentials.
+// API key auth takes precedence over Vertex AI to match provider construction.
+func (c *Config) Backend() string {
+	if c == nil {
+		return BackendUnknown
+	}
+	if c.Provider.APIKey != "" {
+		return BackendGeminiAPI
+	}
+	if c.Provider.VertexProject != "" {
+		return BackendVertexAI
+	}
+	return BackendUnknown
 }
 
 func envOr(key, fallback string) string {

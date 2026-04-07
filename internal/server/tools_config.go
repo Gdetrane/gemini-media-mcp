@@ -19,7 +19,7 @@ func (s *Server) registerConfigTools() {
 	if s.models != nil {
 		mcp.AddTool(s.mcp, &mcp.Tool{
 			Name:        "list_models",
-			Description: "List all available Gemini models with their tiers, capabilities, supported resolutions, and pricing.",
+			Description: "List the models supported by this server with their tiers, capabilities, supported resolutions, and pricing guidance.",
 		}, s.handleListModels)
 	}
 
@@ -53,7 +53,7 @@ func (s *Server) handleListModels(ctx context.Context, _ *mcp.CallToolRequest, _
 	for _, m := range models {
 		fmt.Fprintf(&b, "%-40s  tier=%-8s  type=%-6s", m.ID, m.Tier, m.MediaType)
 		if m.PricePerSec != "" {
-			fmt.Fprintf(&b, "  price=%s/s", m.PricePerSec)
+			fmt.Fprintf(&b, "  price=%s", m.PricePerSec)
 		}
 		if len(m.Resolutions) > 0 {
 			fmt.Fprintf(&b, "  res=[%s]", strings.Join(m.Resolutions, ", "))
@@ -72,13 +72,8 @@ func (s *Server) handleListModels(ctx context.Context, _ *mcp.CallToolRequest, _
 }
 
 func (s *Server) handleGetConfig(_ context.Context, _ *mcp.CallToolRequest, _ EmptyInput) (*mcp.CallToolResult, configResult, error) {
-	backend := "gemini-api"
-	if s.outputDir == "" {
-		backend = "unknown"
-	}
-
 	result := configResult{
-		Backend:   backend,
+		Backend:   s.backend,
 		OutputDir: s.outputDir,
 	}
 
