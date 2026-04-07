@@ -24,9 +24,7 @@ func (p *GeminiProvider) Generate(ctx context.Context, req provider.ImageRequest
 	contents := []*genai.Content{
 		genai.NewContentFromText(req.Prompt, genai.RoleUser),
 	}
-	config := &genai.GenerateContentConfig{
-		ResponseModalities: []string{"IMAGE", "TEXT"},
-	}
+	config := buildImageGenerateConfig(req.AspectRatio, req.Resolution)
 
 	resp, err := p.client.Models.GenerateContent(ctx, model, contents, config)
 	if err != nil {
@@ -82,9 +80,7 @@ func (p *GeminiProvider) Edit(ctx context.Context, req provider.EditImageRequest
 			},
 		},
 	}
-	config := &genai.GenerateContentConfig{
-		ResponseModalities: []string{"IMAGE", "TEXT"},
-	}
+	config := buildImageGenerateConfig("", "")
 
 	resp, err := p.client.Models.GenerateContent(ctx, model, contents, config)
 	if err != nil {
@@ -142,9 +138,7 @@ func (p *GeminiProvider) Compose(ctx context.Context, req provider.ComposeReques
 	parts = append(parts, &genai.Part{Text: req.Prompt})
 
 	contents := []*genai.Content{{Role: string(genai.RoleUser), Parts: parts}}
-	config := &genai.GenerateContentConfig{
-		ResponseModalities: []string{"IMAGE", "TEXT"},
-	}
+	config := buildImageGenerateConfig(req.AspectRatio, "")
 
 	resp, err := p.client.Models.GenerateContent(ctx, model, contents, config)
 	if err != nil {
@@ -207,4 +201,20 @@ func mimeFromPath(path string) string {
 	default:
 		return "image/png"
 	}
+}
+
+func buildImageGenerateConfig(aspectRatio, resolution string) *genai.GenerateContentConfig {
+	config := &genai.GenerateContentConfig{
+		ResponseModalities: []string{"IMAGE", "TEXT"},
+	}
+
+	if aspectRatio == "" && resolution == "" {
+		return config
+	}
+
+	config.ImageConfig = &genai.ImageConfig{
+		AspectRatio: aspectRatio,
+		ImageSize:   resolution,
+	}
+	return config
 }

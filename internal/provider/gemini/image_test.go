@@ -148,3 +148,42 @@ func TestMimeFromPath(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildImageGenerateConfig_Defaults(t *testing.T) {
+	config := buildImageGenerateConfig("", "")
+	if len(config.ResponseModalities) != 2 {
+		t.Fatalf("ResponseModalities len = %d, want 2", len(config.ResponseModalities))
+	}
+	if config.ResponseModalities[0] != "IMAGE" || config.ResponseModalities[1] != "TEXT" {
+		t.Fatalf("ResponseModalities = %v, want [IMAGE TEXT]", config.ResponseModalities)
+	}
+	if config.ImageConfig != nil {
+		t.Fatalf("ImageConfig = %#v, want nil", config.ImageConfig)
+	}
+}
+
+func TestBuildImageGenerateConfig_WithAspectRatioAndResolution(t *testing.T) {
+	config := buildImageGenerateConfig("16:9", "2K")
+	if config.ImageConfig == nil {
+		t.Fatal("ImageConfig is nil, want populated config")
+	}
+	if config.ImageConfig.AspectRatio != "16:9" {
+		t.Errorf("AspectRatio = %q, want %q", config.ImageConfig.AspectRatio, "16:9")
+	}
+	if config.ImageConfig.ImageSize != "2K" {
+		t.Errorf("ImageSize = %q, want %q", config.ImageConfig.ImageSize, "2K")
+	}
+}
+
+func TestBuildImageGenerateConfig_WithAspectRatioOnly(t *testing.T) {
+	config := buildImageGenerateConfig("9:16", "")
+	if config.ImageConfig == nil {
+		t.Fatal("ImageConfig is nil, want populated config")
+	}
+	if config.ImageConfig.AspectRatio != "9:16" {
+		t.Errorf("AspectRatio = %q, want %q", config.ImageConfig.AspectRatio, "9:16")
+	}
+	if config.ImageConfig.ImageSize != "" {
+		t.Errorf("ImageSize = %q, want empty", config.ImageConfig.ImageSize)
+	}
+}
