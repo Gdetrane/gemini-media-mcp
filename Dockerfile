@@ -1,0 +1,12 @@
+FROM golang:1.25.9-alpine AS build
+
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -o /gemini-media-mcp ./cmd/gemini-media-mcp
+
+FROM alpine:3.21
+RUN apk add --no-cache ca-certificates
+COPY --from=build /gemini-media-mcp /usr/local/bin/gemini-media-mcp
+ENTRYPOINT ["gemini-media-mcp"]

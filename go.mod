@@ -1,6 +1,6 @@
 module github.com/mordor-forge/gemini-media-mcp
 
-go 1.25.8
+go 1.25.9
 
 require (
 	github.com/modelcontextprotocol/go-sdk v1.4.1
